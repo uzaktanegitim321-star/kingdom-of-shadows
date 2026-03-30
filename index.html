@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kingdom of Shadows</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;overflow:hidden;font-family:'Rajdhani',sans-serif;user-select:none;}
+canvas{display:block;}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+#hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;display:none;}
+
+/* MENU OVERLAY */
+#menuOverlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;}
+#menuCanvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+#menuContent{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:0;}
+
+.game-title{font-family:'Cinzel Decorative',serif;font-size:clamp(28px,5vw,64px);font-weight:700;color:#fff;text-align:center;letter-spacing:8px;line-height:1.1;text-shadow:0 0 40px rgba(150,150,255,0.4),0 0 80px rgba(100,100,200,0.2);margin-bottom:8px;}
+.game-subtitle{font-family:'Cinzel',serif;font-size:clamp(10px,1.5vw,16px);color:rgba(180,180,220,0.6);letter-spacing:6px;text-transform:uppercase;margin-bottom:50px;}
+
+.menu-btn{font-family:'Cinzel',serif;font-size:clamp(13px,1.8vw,18px);font-weight:700;letter-spacing:4px;color:rgba(200,200,240,0.85);background:transparent;border:1px solid rgba(150,150,220,0.25);padding:14px 60px;cursor:pointer;pointer-events:all;transition:all 0.3s;position:relative;overflow:hidden;margin:5px 0;min-width:260px;text-align:center;clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);}
+.menu-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(150,150,255,0.1),transparent);transition:left 0.4s;}
+.menu-btn:hover{color:#fff;border-color:rgba(150,150,255,0.6);background:rgba(100,100,200,0.1);text-shadow:0 0 20px rgba(200,200,255,0.5);}
+.menu-btn:hover::before{left:100%;}
+.menu-btn.primary{font-size:clamp(15px,2vw,20px);padding:18px 80px;border-color:rgba(150,150,255,0.4);color:#fff;}
+
+/* LANGUAGE SELECTOR */
+#langSelect{position:fixed;top:20px;right:20px;z-index:200;display:flex;gap:8px;}
+.lang-btn{font-family:'Rajdhani',sans-serif;font-size:13px;letter-spacing:2px;color:rgba(180,180,220,0.6);background:transparent;border:1px solid rgba(150,150,200,0.2);padding:6px 14px;cursor:pointer;transition:all 0.2s;}
+.lang-btn.active,.lang-btn:hover{color:#fff;border-color:rgba(150,150,255,0.5);background:rgba(100,100,200,0.1);}
+
+/* SCREENS */
+.screen{position:fixed;top:0;left:0;width:100%;height:100%;z-index:90;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);}
+.screen.active{display:flex;}
+.screen-title{font-family:'Cinzel',serif;font-size:clamp(18px,3vw,32px);color:#fff;letter-spacing:6px;margin-bottom:40px;text-shadow:0 0 30px rgba(150,150,255,0.4);}
+
+/* DIFFICULTY */
+.diff-cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;}
+.diff-card{font-family:'Cinzel',serif;border:1px solid rgba(150,150,200,0.2);padding:30px 40px;cursor:pointer;pointer-events:all;transition:all 0.3s;text-align:center;min-width:160px;position:relative;overflow:hidden;clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);}
+.diff-card:hover{border-color:rgba(150,150,255,0.5);background:rgba(100,100,200,0.1);}
+.diff-card .dc-name{font-size:20px;font-weight:700;letter-spacing:3px;margin-bottom:8px;}
+.diff-card .dc-desc{font-size:12px;letter-spacing:1px;color:rgba(180,180,220,0.6);}
+.diff-card.easy .dc-name{color:#6dff9e;}
+.diff-card.medium .dc-name{color:#ffd56d;}
+.diff-card.hard .dc-name{color:#ff6d6d;}
+
+/* UPGRADE SCREEN */
+#upgradeScreen{background:rgba(0,0,5,0.95);}
+.upgrade-cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+.upg-card{border:1px solid rgba(150,150,200,0.2);padding:25px 30px;cursor:pointer;pointer-events:all;transition:all 0.35s;text-align:center;min-width:180px;max-width:220px;position:relative;overflow:hidden;}
+.upg-card:hover{border-color:rgba(150,150,255,0.6);background:rgba(100,100,200,0.12);transform:translateY(-4px);}
+.upg-icon{font-size:36px;margin-bottom:12px;}
+.upg-name{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:2px;color:#fff;margin-bottom:8px;}
+.upg-desc{font-size:13px;color:rgba(180,180,220,0.7);line-height:1.5;}
+.upg-val{font-size:18px;font-weight:700;color:#a0a0ff;margin-top:8px;}
+
+/* DEATH SCREEN */
+#deathScreen{background:rgba(0,0,0,0.96);}
+.death-title{font-family:'Cinzel Decorative',serif;font-size:clamp(28px,5vw,56px);color:#ff4444;letter-spacing:6px;text-shadow:0 0 40px rgba(255,50,50,0.4);margin-bottom:16px;animation:deathPulse 2s infinite;}
+@keyframes deathPulse{0%,100%{opacity:1;text-shadow:0 0 40px rgba(255,50,50,0.4);}50%{opacity:0.7;text-shadow:0 0 80px rgba(255,50,50,0.7);}}
+.death-stats{font-family:'Rajdhani',sans-serif;font-size:16px;color:rgba(200,200,240,0.7);letter-spacing:2px;margin-bottom:12px;}
+.death-gold{font-family:'Cinzel',serif;font-size:24px;color:#ffd700;letter-spacing:3px;margin-bottom:40px;}
+
+/* SHOP */
+#shopScreen{background:rgba(0,0,5,0.97);overflow-y:auto;padding:20px;}
+.shop-grid{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:900px;}
+.shop-item{border:1px solid rgba(150,150,200,0.2);padding:20px;cursor:pointer;pointer-events:all;transition:all 0.3s;text-align:center;min-width:150px;max-width:180px;position:relative;}
+.shop-item:hover:not(.equipped):not(.cant-afford){border-color:rgba(150,150,255,0.5);background:rgba(100,100,200,0.1);}
+.shop-item.equipped{border-color:rgba(100,255,150,0.5);background:rgba(50,150,80,0.1);}
+.shop-item.cant-afford{opacity:0.4;cursor:not-allowed;}
+.shop-item-name{font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:#fff;letter-spacing:1px;margin-bottom:6px;}
+.shop-item-price{font-size:15px;color:#ffd700;font-weight:700;}
+.shop-preview{width:80px;height:80px;margin:8px auto;display:flex;align-items:center;justify-content:center;}
+.shop-tabs{display:flex;gap:12px;margin-bottom:24px;pointer-events:all;}
+.shop-tab{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:rgba(180,180,220,0.6);background:transparent;border:1px solid rgba(150,150,200,0.2);padding:8px 24px;cursor:pointer;transition:all 0.2s;}
+.shop-tab.active{color:#fff;border-color:rgba(150,150,255,0.5);background:rgba(100,100,200,0.1);}
+.gold-display{font-family:'Cinzel',serif;font-size:18px;color:#ffd700;letter-spacing:3px;margin-bottom:20px;}
+
+/* SETTINGS */
+#settingsScreen{background:rgba(0,0,5,0.97);overflow-y:auto;padding:20px;}
+.settings-group{max-width:500px;width:100%;margin-bottom:30px;}
+.settings-group-title{font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:rgba(150,150,255,0.8);letter-spacing:4px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid rgba(150,150,200,0.15);}
+.setting-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.setting-label{font-family:'Rajdhani',sans-serif;font-size:15px;color:rgba(200,200,240,0.8);letter-spacing:2px;}
+.setting-control{pointer-events:all;}
+input[type=range]{-webkit-appearance:none;width:140px;height:4px;background:rgba(150,150,200,0.2);border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#a0a0ff;border-radius:50%;cursor:pointer;}
+select{font-family:'Rajdhani',sans-serif;font-size:14px;color:#fff;background:rgba(30,30,60,0.8);border:1px solid rgba(150,150,200,0.3);padding:6px 12px;cursor:pointer;outline:none;}
+.toggle{width:44px;height:22px;background:rgba(150,150,200,0.2);border-radius:11px;cursor:pointer;pointer-events:all;position:relative;transition:background 0.3s;}
+.toggle.on{background:rgba(100,100,255,0.5);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left 0.3s;}
+.toggle.on::after{left:25px;}
+.key-btn{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:#fff;background:rgba(30,30,60,0.8);border:1px solid rgba(150,150,200,0.3);padding:5px 14px;cursor:pointer;pointer-events:all;letter-spacing:1px;min-width:50px;text-align:center;}
+.key-btn.listening{border-color:#a0a0ff;color:#a0a0ff;animation:blink 0.5s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+/* HUD */
+#hud{pointer-events:none;}
+.hud-bar-wrap{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+.hud-bars{display:flex;gap:16px;align-items:flex-end;}
+.bar-container{display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+.bar-label{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:2px;color:rgba(200,200,240,0.6);}
+.bar-bg{background:rgba(0,0,0,0.6);border:1px solid rgba(150,150,200,0.2);padding:2px;}
+.bar-fill{height:12px;transition:width 0.15s;border-radius:1px;}
+.hp-fill{background:linear-gradient(90deg,#ff4444,#ff7777);}
+.ulti-fill{background:linear-gradient(90deg,#6644ff,#aa88ff);}
+.xp-fill{background:linear-gradient(90deg,#44aaff,#88ddff);}
+
+.hud-top{position:fixed;top:20px;left:20px;pointer-events:none;}
+.hud-level{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:3px;}
+.hud-gold-hud{font-family:'Cinzel',serif;font-size:16px;color:#ffd700;letter-spacing:2px;margin-top:4px;}
+.hud-kills{font-family:'Rajdhani',sans-serif;font-size:14px;color:rgba(200,200,240,0.7);letter-spacing:2px;margin-top:2px;}
+
+.ulti-ready{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:14px;color:#aa88ff;letter-spacing:4px;animation:ultiBlink 1s infinite;pointer-events:none;}
+@keyframes ultiBlink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* FLOATING TEXT */
+.float-text{position:fixed;pointer-events:none;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:18px;animation:floatUp 1s forwards;z-index:50;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-50px);}}
+
+/* BACK BTN */
+.back-btn{font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;color:rgba(180,180,220,0.5);background:transparent;border:1px solid rgba(150,150,200,0.15);padding:8px 20px;cursor:pointer;pointer-events:all;transition:all 0.2s;margin-top:30px;}
+.back-btn:hover{color:#fff;border-color:rgba(150,150,255,0.4);}
+
+.separator{width:200px;height:1px;background:linear-gradient(90deg,transparent,rgba(150,150,200,0.3),transparent);margin:16px 0;}
+
+#saveNotif{position:fixed;top:20px;right:20px;font-family:'Rajdhani',sans-serif;font-size:14px;letter-spacing:2px;color:#6dff9e;background:rgba(0,20,10,0.9);border:1px solid rgba(50,200,100,0.3);padding:10px 20px;z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- LANGUAGE BUTTONS -->
+<div id="langSelect">
+  <button class="lang-btn active" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" onclick="setLang('tr')">TR</button>
+</div>
+
+<!-- SAVE NOTIFICATION -->
+<div id="saveNotif">✓ SAVED</div>
+
+<!-- GAME CANVAS -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-top">
+    <div class="hud-level" id="hudLevel">LV 1</div>
+    <div class="hud-gold-hud" id="hudGold">⬡ 0</div>
+    <div class="hud-kills" id="hudKills">0 KILLS</div>
+  </div>
+  <div class="hud-bar-wrap">
+    <div id="ultiReady" class="ulti-ready" style="display:none">— ULTIMATE READY —</div>
+    <div class="hud-bars">
+      <div class="bar-container">
+        <div class="bar-label" id="hpLabel">HP</div>
+        <div class="bar-bg"><div id="hpBar" class="bar-fill hp-fill" style="width:200px;"></div></div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-label" id="xpLabel">XP</div>
+        <div class="bar-bg"><div id="xpBar" class="bar-fill xp-fill" style="width:0px;"></div></div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-label" id="ultiLabel">ULTI</div>
+        <div class="bar-bg"><div id="ultiBar" class="bar-fill ulti-fill" style="width:0px;"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN MENU -->
+<div id="menuOverlay">
+  <canvas id="menuCanvas"></canvas>
+  <div id="menuContent">
+    <div class="game-title" id="gameTitle">KINGDOM<br>OF SHADOWS</div>
+    <div class="game-subtitle" id="gameSubtitle">THE LAST KUNAI</div>
+    <div class="separator"></div>
+    <button class="menu-btn primary" id="btnPlay" onclick="showDifficulty()">PLAY</button>
+    <button class="menu-btn" id="btnShop" onclick="showShop()">SHOP</button>
+    <button class="menu-btn" id="btnSettings" onclick="showSettings()">SETTINGS</button>
+  </div>
+</div>
+
+<!-- DIFFICULTY SCREEN -->
+<div class="screen" id="diffScreen">
+  <div class="screen-title" id="diffTitle">SELECT DIFFICULTY</div>
+  <div class="diff-cards">
+    <div class="diff-card easy" onclick="startGame('easy')">
+      <div class="dc-name" id="dcEasy">EASY</div>
+      <div class="dc-desc" id="dcEasyDesc">Slower enemies<br>More forgiving</div>
+    </div>
+    <div class="diff-card medium" onclick="startGame('medium')">
+      <div class="dc-name" id="dcMedium">MEDIUM</div>
+      <div class="dc-desc" id="dcMedDesc">Balanced<br>challenge</div>
+    </div>
+    <div class="diff-card hard" onclick="startGame('hard')">
+      <div class="dc-name" id="dcHard">HARD</div>
+      <div class="dc-desc" id="dcHardDesc">Relentless<br>enemies</div>
+    </div>
+  </div>
+  <button class="back-btn" id="btnBack1" onclick="showMenu()">← BACK</button>
+</div>
+
+<!-- UPGRADE SCREEN -->
+<div class="screen" id="upgradeScreen">
+  <div class="screen-title" id="upgTitle">LEVEL UP — CHOOSE UPGRADE</div>
+  <div class="upgrade-cards" id="upgradeCards"></div>
+</div>
+
+<!-- DEATH SCREEN -->
+<div class="screen" id="deathScreen">
+  <div class="death-title" id="deathTitle">YOU DIED</div>
+  <div class="death-stats" id="deathStats"></div>
+  <div class="death-gold" id="deathGold"></div>
+  <button class="menu-btn primary" id="btnRetry" onclick="showDifficulty()">RETRY</button>
+  <button class="menu-btn" id="btnToMenu" onclick="showMenu()">MAIN MENU</button>
+</div>
+
+<!-- SHOP SCREEN -->
+<div class="screen" id="shopScreen">
+  <div class="screen-title" id="shopTitle">SHOP</div>
+  <div class="gold-display" id="shopGoldDisplay">⬡ 0</div>
+  <div class="shop-tabs">
+    <button class="shop-tab active" id="tabSkins" onclick="shopTab('skins')">KUNAI SKINS</button>
+    <button class="shop-tab" id="tabEquip" onclick="shopTab('equip')">EQUIPPED</button>
+  </div>
+  <div class="shop-grid" id="shopGrid"></div>
+  <button class="back-btn" id="btnBack2" onclick="showMenu()">← BACK</button>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div class="screen" id="settingsScreen">
+  <div class="screen-title" id="settingsTitle">SETTINGS</div>
+  <div class="settings-group">
+    <div class="settings-group-title" id="sgGraphics">GRAPHICS</div>
+    <div class="setting-row">
+      <span class="setting-label" id="slParticles">PARTICLES</span>
+      <div class="toggle on setting-control" id="togParticles" onclick="toggleSetting('particles')"></div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label" id="slBlood">BLOOD EFFECTS</span>
+      <div class="toggle on setting-control" id="togBlood" onclick="toggleSetting('blood')"></div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label" id="slShake">SCREEN SHAKE</span>
+      <div class="toggle on setting-control" id="togShake" onclick="toggleSetting('shake')"></div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label" id="slVolume">MASTER VOLUME</span>
+      <input type="range" class="setting-control" id="sliderVolume" min="0" max="100" value="70" oninput="settings.volume=this.value">
+    </div>
+  </div>
+  <div class="settings-group">
+    <div class="settings-group-title" id="sgControls">CONTROLS</div>
+    <div class="setting-row"><span class="setting-label">MOVE UP</span><button class="key-btn setting-control" id="keyUp" onclick="listenKey('up')">W</button></div>
+    <div class="setting-row"><span class="setting-label">MOVE DOWN</span><button class="key-btn setting-control" id="keyDown" onclick="listenKey('down')">S</button></div>
+    <div class="setting-row"><span class="setting-label">MOVE LEFT</span><button class="key-btn setting-control" id="keyLeft" onclick="listenKey('left')">A</button></div>
+    <div class="setting-row"><span class="setting-label">MOVE RIGHT</span><button class="key-btn setting-control" id="keyRight" onclick="listenKey('right')">D</button></div>
+    <div class="setting-row"><span class="setting-label" id="slUlti">ULTIMATE</span><button class="key-btn setting-control" id="keyUlti" onclick="listenKey('ulti')">Q</button></div>
+  </div>
+  <div style="display:flex;gap:12px;pointer-events:all;">
+    <button class="menu-btn" id="btnSave" onclick="saveSettings()">SAVE SETTINGS</button>
+    <button class="back-btn" id="btnBack3" onclick="showMenu()">← BACK</button>
+  </div>
+</div>
+
+<script>
+// ==================== LANGUAGE ====================
+let lang = 'en';
+const T = {
+  en: {
+    gameTitle:'KINGDOM<br>OF SHADOWS', gameSub:'THE LAST KUNAI',
+    play:'PLAY', shop:'SHOP', settings:'SETTINGS',
+    diffTitle:'SELECT DIFFICULTY', easy:'EASY', medium:'MEDIUM', hard:'HARD',
+    easyDesc:'Slower enemies<br>More forgiving', medDesc:'Balanced<br>challenge', hardDesc:'Relentless<br>enemies',
+    back:'← BACK', shopTitle:'SHOP', settingsTitle:'SETTINGS',
+    sgGraphics:'GRAPHICS', sgControls:'CONTROLS',
+    slParticles:'PARTICLES', slBlood:'BLOOD EFFECTS', slShake:'SCREEN SHAKE', slVolume:'MASTER VOLUME', slUlti:'ULTIMATE',
+    deathTitle:'YOU DIED', retry:'RETRY', toMenu:'MAIN MENU',
+    upgTitle:'LEVEL UP — CHOOSE UPGRADE',
+    upgHP:'VITALITY', upgHPd:'Increase max HP', upgDmg:'POWER', upgDmgd:'Increase kunai damage',
+    upgSpd:'SWIFTNESS', upgSpdd:'Increase throw speed', upgSpc:'SHADOW STEP', upgSpcd:'Unlock special ability',
+    tabSkins:'KUNAI SKINS', tabEquip:'EQUIPPED',
+    savedMsg:'✓ SAVED', lvl:'LV', kills:'KILLS',
+    ultiReady:'— ULTIMATE READY —', ultiKey:'[Q] ULTIMATE',
+    goldEarned:'GOLD EARNED:',
+    lvlReached:'LEVEL REACHED:', killsTotal:'TOTAL KILLS:',
+  },
+  tr: {
+    gameTitle:'KINGDOM<br>OF SHADOWS', gameSub:'SON KUNAİ',
+    play:'OYNA', shop:'DÜKKAN', settings:'AYARLAR',
+    diffTitle:'ZORLUK SEÇ', easy:'KOLAY', medium:'ORTA', hard:'ZOR',
+    easyDesc:'Yavaş düşmanlar<br>Daha kolay', medDesc:'Dengeli<br>zorluk', hardDesc:'Acımasız<br>düşmanlar',
+    back:'← GERİ', shopTitle:'DÜKKAN', settingsTitle:'AYARLAR',
+    sgGraphics:'GRAFİKLER', sgControls:'KONTROLLER',
+    slParticles:'PARTİKÜLLER', slBlood:'KAN EFEKTİ', slShake:'EKRAN SARSINTISI', slVolume:'SES SEVİYESİ', slUlti:'ULTİMAT',
+    deathTitle:'ÖLDÜN', retry:'TEKRAR', toMenu:'ANA MENÜ',
+    upgTitle:'SEVİYE ATLADI — YETENEKSEÇİN',
+    upgHP:'DAYANIKLILIK', upgHPd:'Max canı artır', upgDmg:'GÜÇ', upgDmgd:'Kunai hasarını artır',
+    upgSpd:'ÇEVİKLİK', upgSpdd:'Atış hızını artır', upgSpc:'GÖLGE ADIM', upgSpcd:'Özel yeteneği aç',
+    tabSkins:'KUNAİ KAPLAMAları', tabEquip:'EKİPMANLI',
+    savedMsg:'✓ KAYDEDİLDİ', lvl:'SV', kills:'ÖLDÜRME',
+    ultiReady:'— ULTİMAT HAZIR —', ultiKey:'[Q] ULTİMAT',
+    goldEarned:'KAZANILAN ALTIN:',
+    lvlReached:'ULAŞILAN SEVİYE:', killsTotal:'TOPLAM ÖLDÜRME:',
+  }
+};
+function t(k){return (T[lang]||T.en)[k]||k;}
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.textContent===l.toUpperCase()));
+  updateTexts();
+}
+function updateTexts(){
+  document.getElementById('gameTitle').innerHTML=t('gameTitle');
+  document.getElementById('gameSubtitle').textContent=t('gameSub');
+  document.getElementById('btnPlay').textContent=t('play');
+  document.getElementById('btnShop').textContent=t('shop');
+  document.getElementById('btnSettings').textContent=t('settings');
+  document.getElementById('diffTitle').textContent=t('diffTitle');
+  document.getElementById('dcEasy').textContent=t('easy');
+  document.getElementById('dcEasyDesc').innerHTML=t('easyDesc');
+  document.getElementById('dcMedium').textContent=t('medium');
+  document.getElementById('dcMedDesc').innerHTML=t('medDesc');
+  document.getElementById('dcHard').textContent=t('hard');
+  document.getElementById('dcHardDesc').innerHTML=t('hardDesc');
+  document.getElementById('btnBack1').textContent=t('back');
+  document.getElementById('btnBack2').textContent=t('back');
+  document.getElementById('btnBack3').textContent=t('back');
+  document.getElementById('shopTitle').textContent=t('shopTitle');
+  document.getElementById('settingsTitle').textContent=t('settingsTitle');
+  document.getElementById('sgGraphics').textContent=t('sgGraphics');
+  document.getElementById('sgControls').textContent=t('sgControls');
+  document.getElementById('slParticles').textContent=t('slParticles');
+  document.getElementById('slBlood').textContent=t('slBlood');
+  document.getElementById('slShake').textContent=t('slShake');
+  document.getElementById('slVolume').textContent=t('slVolume');
+  document.getElementById('slUlti').textContent=t('slUlti');
+  document.getElementById('deathTitle').textContent=t('deathTitle');
+  if(document.getElementById('btnRetry'))document.getElementById('btnRetry').textContent=t('retry');
+  if(document.getElementById('btnToMenu'))document.getElementById('btnToMenu').textContent=t('toMenu');
+  document.getElementById('upgTitle').textContent=t('upgTitle');
+  document.getElementById('tabSkins').textContent=t('tabSkins');
+  document.getElementById('tabEquip').textContent=t('tabEquip');
+  document.getElementById('btnSave').textContent='SAVE SETTINGS';
+  document.getElementById('ultiReady').textContent=t('ultiReady');
+}
+
+// ==================== SETTINGS ====================
+let settings = {
+  particles:true, blood:true, shake:true, volume:70,
+  keys:{up:'KeyW',down:'KeyS',left:'KeyA',right:'KeyD',ulti:'KeyQ'}
+};
+let listeningKey = null;
+function toggleSetting(k){
+  settings[k]=!settings[k];
+  document.getElementById('tog'+k.charAt(0).toUpperCase()+k.slice(1)).classList.toggle('on',settings[k]);
+}
+function listenKey(k){
+  listeningKey=k;
+  const ids={up:'keyUp',down:'keyDown',left:'keyLeft',right:'keyRight',ulti:'keyUlti'};
+  document.querySelectorAll('.key-btn').forEach(b=>b.classList.remove('listening'));
+  document.getElementById(ids[k]).classList.add('listening');
+  document.getElementById(ids[k]).textContent='...';
+}
+document.addEventListener('keydown',e=>{
+  if(listeningKey){
+    const ids={up:'keyUp',down:'keyDown',left:'keyLeft',right:'keyRight',ulti:'keyUlti'};
+    settings.keys[listeningKey]=e.code;
+    const label=e.code.replace('Key','').replace('Digit','');
+    document.getElementById(ids[listeningKey]).textContent=label;
+    document.getElementById(ids[listeningKey]).classList.remove('listening');
+    listeningKey=null;
+    e.preventDefault();
+    return;
+  }
+  keys[e.code]=true;
+  if(e.code===settings.keys.ulti && gameState==='playing') activateUlti();
+});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+function saveSettings(){
+  localStorage.setItem('kosSettings',JSON.stringify(settings));
+  const n=document.getElementById('saveNotif');
+  n.textContent=t('savedMsg'); n.style.opacity='1';
+  setTimeout(()=>n.style.opacity='0',2000);
+}
+function loadSettings(){
+  const s=localStorage.getItem('kosSettings');
+  if(s){
+    const p=JSON.parse(s);
+    Object.assign(settings,p);
+    document.getElementById('togParticles').classList.toggle('on',settings.particles);
+    document.getElementById('togBlood').classList.toggle('on',settings.blood);
+    document.getElementById('togShake').classList.toggle('on',settings.shake);
+    document.getElementById('sliderVolume').value=settings.volume;
+    const kmap={up:'keyUp',down:'keyDown',left:'keyLeft',right:'keyRight',ulti:'keyUlti'};
+    for(const[k,id]of Object.entries(kmap)){
+      const label=(settings.keys[k]||'').replace('Key','').replace('Digit','');
+      document.getElementById(id).textContent=label||'?';
+    }
+  }
+}
+
+// ==================== GOLD / SAVE ====================
+let gold = 0;
+let equippedSkin = 'default';
+function loadProgress(){
+  const p=localStorage.getItem('kosProgress');
+  if(p){const d=JSON.parse(p);gold=d.gold||0;equippedSkin=d.equippedSkin||'default';ownedSkins=d.ownedSkins||['default'];}
+}
+function saveProgress(){
+  localStorage.setItem('kosProgress',JSON.stringify({gold,equippedSkin,ownedSkins}));
+}
+
+// ==================== KUNAI SKINS ====================
+let ownedSkins=['default'];
+const SKINS=[
+  {id:'default',name:'SHADOW',price:0,color:'#aaaacc',trailColor:'rgba(150,150,200,0.4)'},
+  {id:'crimson',name:'CRIMSON',price:150,color:'#ff4444',trailColor:'rgba(255,50,50,0.4)'},
+  {id:'void',name:'VOID',price:250,color:'#8844ff',trailColor:'rgba(130,50,255,0.4)'},
+  {id:'gold',name:'GOLDEN',price:400,color:'#ffd700',trailColor:'rgba(255,200,0,0.4)'},
+  {id:'ice',name:'ICE',price:300,color:'#44ddff',trailColor:'rgba(50,200,255,0.4)'},
+  {id:'ghost',name:'GHOST',price:200,color:'#eeeeff',trailColor:'rgba(200,200,255,0.3)'},
+];
+function getSkin(){return SKINS.find(s=>s.id===equippedSkin)||SKINS[0];}
+
+// ==================== MENU BACKGROUND ====================
+const menuCanvas=document.getElementById('menuCanvas');
+const mctx=menuCanvas.getContext('2d');
+let mW=0,mH=0;
+const particles=[];
+function initMenuCanvas(){
+  mW=menuCanvas.width=window.innerWidth;
+  mH=menuCanvas.height=window.innerHeight;
+  particles.length=0;
+  for(let i=0;i<120;i++) particles.push(makeParticle());
+}
+function makeParticle(){
+  return{
+    x:Math.random()*mW, y:Math.random()*mH,
+    vx:(Math.random()-0.5)*0.4, vy:(Math.random()-0.5)*0.4,
+    r:Math.random()*1.5+0.3,
+    a:Math.random()*0.5+0.1,
+    pulse:Math.random()*Math.PI*2,
+    pulseSpeed:0.01+Math.random()*0.02
+  };
+}
+let menuFrame=0;
+function animateMenu(){
+  if(document.getElementById('menuOverlay').style.display==='none'){return;}
+  requestAnimationFrame(animateMenu);
+  menuFrame++;
+  mctx.clearRect(0,0,mW,mH);
+
+  // Deep bg
+  const bg=mctx.createRadialGradient(mW/2,mH/2,0,mW/2,mH/2,Math.max(mW,mH)*0.8);
+  bg.addColorStop(0,'#0a0a18');
+  bg.addColorStop(0.5,'#050510');
+  bg.addColorStop(1,'#000003');
+  mctx.fillStyle=bg;
+  mctx.fillRect(0,0,mW,mH);
+
+  // Animated shadow fog layers
+  for(let i=0;i<3;i++){
+    const phase=menuFrame*0.003+i*2.1;
+    const cx=mW/2+Math.sin(phase)*mW*0.15;
+    const cy=mH/2+Math.cos(phase*0.7)*mH*0.1;
+    const fog=mctx.createRadialGradient(cx,cy,0,cx,cy,mW*0.5);
+    const a=0.06+i*0.02;
+    fog.addColorStop(0,`rgba(${40+i*10},${30+i*10},${80+i*20},${a})`);
+    fog.addColorStop(1,'rgba(0,0,0,0)');
+    mctx.fillStyle=fog;
+    mctx.fillRect(0,0,mW,mH);
+  }
+
+  // Drifting shadow shards
+  for(let i=0;i<6;i++){
+    const phase=menuFrame*0.001+i*1.047;
+    const x=mW/2+Math.sin(phase)*mW*0.4;
+    const y=mH/2+Math.cos(phase*0.8)*mH*0.35;
+    const sz=80+i*40+Math.sin(phase*2)*20;
+    mctx.save();
+    mctx.translate(x,y);
+    mctx.rotate(phase*0.5);
+    const sg=mctx.createRadialGradient(0,0,0,0,0,sz);
+    sg.addColorStop(0,`rgba(50,30,120,0.12)`);
+    sg.addColorStop(1,'rgba(0,0,0,0)');
+    mctx.fillStyle=sg;
+    mctx.beginPath();
+    for(let j=0;j<6;j++){
+      const a=j/6*Math.PI*2;
+      const r=sz*(0.6+Math.sin(a*3+phase)*0.4);
+      j===0?mctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):mctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    }
+    mctx.closePath();
+    mctx.fill();
+    mctx.restore();
+  }
+
+  // Stars / particles
+  for(const p of particles){
+    p.pulse+=p.pulseSpeed;
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0)p.x=mW; if(p.x>mW)p.x=0;
+    if(p.y<0)p.y=mH; if(p.y>mH)p.y=0;
+    const pa=p.a*(0.5+0.5*Math.sin(p.pulse));
+    mctx.beginPath();
+    mctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    mctx.fillStyle=`rgba(180,180,255,${pa})`;
+    mctx.fill();
+  }
+
+  // Connection lines
+  mctx.strokeStyle='rgba(100,100,180,0.04)';
+  mctx.lineWidth=0.5;
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){mctx.beginPath();mctx.moveTo(particles[i].x,particles[i].y);mctx.lineTo(particles[j].x,particles[j].y);mctx.stroke();}
+    }
+  }
+
+  // Ground grid
+  mctx.strokeStyle='rgba(80,80,160,0.06)';
+  mctx.lineWidth=0.5;
+  const gs=80;
+  for(let x=0;x<mW;x+=gs){mctx.beginPath();mctx.moveTo(x,0);mctx.lineTo(x,mH);mctx.stroke();}
+  for(let y=0;y<mH;y+=gs){mctx.beginPath();mctx.moveTo(0,y);mctx.lineTo(mW,y);mctx.stroke();}
+}
+
+// ==================== GAME ENGINE ====================
+const gameCanvas=document.getElementById('gameCanvas');
+const ctx=gameCanvas.getContext('2d');
+let GW=0,GH=0;
+let keys={};
+let gameState='menu'; // menu, playing, dead, upgrade, shop, settings
+let difficulty='medium';
+let shakeX=0,shakeY=0,shakeMag=0;
+
+// Player
+let player={
+  x:0,y:0,
+  hp:100,maxHp:100,
+  damage:25,
+  throwRate:0.5, // per second — max throws/sec
+  lastThrow:0,
+  speed:180,
+  level:1,
+  xp:0,
+  xpToNext:100,
+  ulti:0,ultiMax:100,
+  ultiActive:false,
+  kills:0,
+  alive:true,
+  walkAnim:0,
+  specialUnlocked:false,
+  specialCooldown:0,
+  facingAngle:0,
+};
+
+// Spawn timing
+let spawnTimer=0;
+let spawnInterval=3; // seconds
+let gameTime=0;
+let sessionGold=0;
+
+// Arrays
+let kunais=[];
+let enemies=[];
+let particles2=[];
+let bloodDrops=[];
+
+// Camera
+let camX=0,camY=0;
+const MAP_W=3000,MAP_H=3000;
+
+// Diff multipliers
+const DIFF={
+  easy:{spawnMult:0.6,hpMult:0.7,dmgMult:0.5,spawnInterval:4},
+  medium:{spawnMult:1,hpMult:1,dmgMult:1,spawnInterval:3},
+  hard:{spawnMult:1.5,hpMult:1.4,dmgMult:1.5,spawnInterval:2}
+};
+
+// Enemy types
+const ENEMY_TYPES=[
+  {type:'small',w:18,h:24,hp:50,damage:5,throwRate:0.75,speed:80,xpVal:10,goldVal:5,color:'#557'},
+  {type:'medium',w:26,h:34,hp:75,damage:10,throwRate:1,speed:60,xpVal:20,goldVal:12,color:'#774'},
+  {type:'large',w:38,h:48,hp:100,damage:20,throwRate:2,speed:40,xpVal:35,goldVal:25,color:'#755'},
+];
+
+function getEnemyType(){
+  const r=Math.random();
+  if(r<0.5) return ENEMY_TYPES[0];
+  if(r<0.8) return ENEMY_TYPES[1];
+  return ENEMY_TYPES[2];
+}
+
+function spawnEnemy(){
+  const dm=DIFF[difficulty];
+  const et=getEnemyType();
+  // Spawn at edge of view
+  const angle=Math.random()*Math.PI*2;
+  const dist=Math.max(GW,GH)*0.65;
+  let ex=player.x+Math.cos(angle)*dist;
+  let ey=player.y+Math.sin(angle)*dist;
+  ex=Math.max(50,Math.min(MAP_W-50,ex));
+  ey=Math.max(50,Math.min(MAP_H-50,ey));
+  enemies.push({
+    x:ex,y:ey,
+    hp:et.hp*dm.hpMult,
+    maxHp:et.hp*dm.hpMult,
+    damage:et.damage*dm.dmgMult,
+    throwRate:et.throwRate,
+    lastThrow:Math.random()*et.throwRate,
+    speed:et.speed,
+    type:et.type,
+    w:et.w,h:et.h,
+    xpVal:et.xpVal,goldVal:et.goldVal,
+    color:et.color,
+    alive:true,
+    walkAnim:Math.random()*Math.PI*2,
+    angle:0,
+    hitFlash:0,
+    deathAnim:0,
+    dying:false,
+  });
+}
+
+// ==================== DRAWING ====================
+function drawMap(){
+  // Dark ground
+  ctx.fillStyle='#080810';
+  ctx.fillRect(0,0,MAP_W,MAP_H);
+
+  // Shadow tiles
+  for(let tx=0;tx<MAP_W;tx+=100){
+    for(let ty=0;ty<MAP_H;ty+=100){
+      const shade=(Math.sin(tx*0.02)*Math.sin(ty*0.017)*0.5+0.5);
+      ctx.fillStyle=`rgba(20,15,40,${shade*0.3})`;
+      ctx.fillRect(tx,ty,100,100);
+    }
+  }
+
+  // Grid
+  ctx.strokeStyle='rgba(60,60,100,0.12)';
+  ctx.lineWidth=0.5;
+  for(let x=0;x<MAP_W;x+=100){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,MAP_H);ctx.stroke();}
+  for(let y=0;y<MAP_H;y+=100){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(0,MAP_H);ctx.stroke();}
+
+  // Ambient fog circles
+  for(let i=0;i<8;i++){
+    const fx=300+i*350,fy=200+((i*470)%MAP_H);
+    const fg=ctx.createRadialGradient(fx,fy,0,fx,fy,200);
+    fg.addColorStop(0,'rgba(30,20,60,0.15)');
+    fg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=fg;
+    ctx.fillRect(fx-200,fy-200,400,400);
+  }
+}
+
+function drawCharacter(x,y,facing,walkAnim,isPlayer){
+  ctx.save();
+  ctx.translate(x,y);
+
+  const bw=isPlayer?22:18, bh=isPlayer?28:22;
+  const head=isPlayer?9:7;
+
+  // Shadow
+  ctx.save();
+  ctx.scale(1,0.3);
+  ctx.beginPath();
+  ctx.ellipse(0,bh*0.6,bw*0.7,bh*0.3,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.fill();
+  ctx.restore();
+
+  // Leg wrap animation
+  const legSwing=Math.sin(walkAnim)*6;
+  // Left leg
+  ctx.save();
+  ctx.rotate(legSwing*0.05);
+  ctx.fillStyle='#2a2a3a';
+  ctx.fillRect(-bw*0.35,bh*0.3,bw*0.3,bh*0.5);
+  // Bandage strips
+  for(let i=0;i<4;i++){
+    ctx.fillStyle=`rgba(${isPlayer?'160,160,180':'150,130,130'},0.5)`;
+    ctx.fillRect(-bw*0.35,bh*0.3+i*bh*0.12,bw*0.3,2);
+  }
+  ctx.restore();
+  // Right leg
+  ctx.save();
+  ctx.rotate(-legSwing*0.05);
+  ctx.fillStyle='#2a2a3a';
+  ctx.fillRect(bw*0.05,bh*0.3,bw*0.3,bh*0.5);
+  for(let i=0;i<4;i++){
+    ctx.fillStyle=`rgba(${isPlayer?'160,160,180':'150,130,130'},0.5)`;
+    ctx.fillRect(bw*0.05,bh*0.3+i*bh*0.12,bw*0.3,2);
+  }
+  ctx.restore();
+
+  // Body (wrapped)
+  ctx.fillStyle='#1a1a2a';
+  ctx.fillRect(-bw/2,-bh*0.05,bw,bh*0.38);
+  // Body bandage
+  for(let i=0;i<5;i++){
+    ctx.fillStyle=`rgba(${isPlayer?'150,150,190':'140,120,120'},0.4)`;
+    ctx.fillRect(-bw/2,-bh*0.05+i*bh*0.07,bw,1.5);
+  }
+
+  // Kunai bag (only player)
+  if(isPlayer){
+    ctx.fillStyle='#1a1a35';
+    ctx.fillRect(bw*0.3,-bh*0.05,10,14);
+    // Kunai handles in bag
+    for(let i=0;i<3;i++){
+      ctx.fillStyle='#9999bb';
+      ctx.fillRect(bw*0.32+i*3,-bh*0.08,2,6);
+    }
+  }
+
+  // Arms
+  const armSwing=Math.sin(walkAnim+Math.PI)*4;
+  ctx.fillStyle='#1a1a2a';
+  ctx.fillRect(-bw/2-6,-bh*0.05,7,bh*0.3);
+  ctx.fillRect(bw/2-1,-bh*0.05+armSwing,7,bh*0.3);
+
+  // Sword for enemies
+  if(!isPlayer){
+    const sw=bw*0.6+bw*0.8*(ENEMY_TYPES.find(e=>e.color===('#2a2a3a'))?.type==='large'?1:0);
+    ctx.save();
+    ctx.translate(bw*0.5+4,-bh*0.1);
+    ctx.rotate(0.3+legSwing*0.05);
+    ctx.fillStyle='#667799';
+    ctx.fillRect(-2,-bw*1.2,4,bw*1.5);
+    ctx.fillStyle='#aabbcc';
+    ctx.fillRect(-1,-bw*1.25,2,bw*0.5);
+    ctx.restore();
+  }
+
+  // Head (Omen-style wrapped)
+  ctx.fillStyle='#12121f';
+  ctx.beginPath();
+  ctx.arc(0,-bh*0.05-head,head,0,Math.PI*2);
+  ctx.fill();
+  // Head wraps
+  for(let i=0;i<4;i++){
+    const a=i/4*Math.PI*2;
+    ctx.strokeStyle=`rgba(${isPlayer?'140,140,180':'130,110,110'},0.5)`;
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.arc(0,-bh*0.05-head,head-1,a,a+Math.PI*0.6);
+    ctx.stroke();
+  }
+  // Eye slit — just a dark horizontal line (no colored marks)
+  ctx.fillStyle='rgba(0,0,0,0.8)';
+  ctx.fillRect(-head*0.6,-bh*0.05-head-1,head*1.2,3);
+
+  ctx.restore();
+}
+
+function drawKunai(k){
+  const skin=SKINS.find(s=>s.id===k.skinId)||SKINS[0];
+  ctx.save();
+  ctx.translate(k.x,k.y);
+  ctx.rotate(k.angle);
+  // Trail
+  if(k.trail){
+    for(let i=0;i<k.trail.length;i++){
+      const tr=k.trail[i];
+      const a=(i/k.trail.length)*0.5;
+      ctx.save();
+      ctx.translate(tr.x-k.x,tr.y-k.y);
+      ctx.rotate(tr.angle);
+      ctx.globalAlpha=a*0.5;
+      ctx.fillStyle=skin.trailColor;
+      ctx.fillRect(-6,-1,12,2);
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha=1;
+  // Blade
+  ctx.fillStyle=skin.color;
+  ctx.beginPath();
+  ctx.moveTo(10,0);
+  ctx.lineTo(-6,-2);
+  ctx.lineTo(-10,0);
+  ctx.lineTo(-6,2);
+  ctx.closePath();
+  ctx.fill();
+  // Ring
+  ctx.strokeStyle=skin.color;
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.arc(-11,0,3,0,Math.PI*2);
+  ctx.stroke();
+  // Handle
+  ctx.fillStyle='#333345';
+  ctx.fillRect(-9,-1.5,5,3);
+  ctx.restore();
+}
+
+function drawEnemy(e){
+  if(!e.alive&&e.deathAnim>=1) return;
+  ctx.save();
+  ctx.translate(e.x,e.y);
+  if(e.dying){
+    ctx.globalAlpha=1-e.deathAnim;
+    ctx.rotate(e.deathAnim*Math.PI*0.5);
+    ctx.scale(1-e.deathAnim*0.5,1-e.deathAnim*0.5);
+  }
+  if(e.hitFlash>0){ctx.globalAlpha=0.5+e.hitFlash*0.5;}
+  const scale=e.type==='large'?1.6:e.type==='medium'?1.2:1;
+  ctx.scale(scale,scale);
+  drawCharacter(0,0,e.angle,e.walkAnim,false);
+  ctx.restore();
+
+  // HP bar
+  if(e.alive&&e.hp<e.maxHp){
+    const bw=e.w*2;
+    const bx=e.x-bw/2, by=e.y-e.h/2-14;
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(bx,by,bw,5);
+    ctx.fillStyle=e.hp/e.maxHp>0.5?'#44ff88':'#ff4444';
+    ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),5);
+  }
+}
+
+function drawParticles(){
+  for(const p of particles2){
+    ctx.save();
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+  if(settings.blood){
+    for(const b of bloodDrops){
+      ctx.save();
+      ctx.globalAlpha=b.life*0.7;
+      ctx.fillStyle='#cc2222';
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+function drawVignette(){
+  const vg=ctx.createRadialGradient(GW/2,GH/2,GH*0.3,GW/2,GH/2,GH*0.8);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,30,0.7)');
+  ctx.save();
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle=vg;
+  ctx.fillRect(0,0,GW,GH);
+  ctx.restore();
+}
+
+// ==================== ULTI ====================
+function activateUlti(){
+  if(player.ulti<player.ultiMax||player.ultiActive) return;
+  player.ultiActive=true;
+  player.ulti=0;
+  document.getElementById('ultiReady').style.display='none';
+
+  // Collect all enemies in view
+  const targets=[...enemies.filter(e=>e.alive)];
+  if(targets.length===0){player.ultiActive=false;return;}
+
+  let i=0;
+  const startX=player.x,startY=player.y;
+  const skin=getSkin();
+
+  function strikeNext(){
+    if(i>=targets.length){
+      // Return to origin
+      const retKunai={
+        x:targets[targets.length-1]?.x||startX,
+        y:targets[targets.length-1]?.y||startY,
+        vx:(startX-(targets[targets.length-1]?.x||startX))*0.05,
+        vy:(startY-(targets[targets.length-1]?.y||startY))*0.05,
+        angle:0,speed:400,damage:0,skinId:equippedSkin,
+        trail:[],ulti:true,returning:true,
+        targetX:startX,targetY:startY,
+      };
+      kunais.push(retKunai);
+      setTimeout(()=>{player.ultiActive=false;},600);
+      return;
+    }
+    const tgt=targets[i];
+    const angle=Math.atan2(tgt.y-(i===0?startY:targets[i-1].y),tgt.x-(i===0?startX:targets[i-1].x));
+    const uk={
+      x:i===0?startX:targets[i-1].x,
+      y:i===0?startY:targets[i-1].y,
+      vx:Math.cos(angle)*350,vy:Math.sin(angle)*350,
+      angle,speed:350,damage:player.damage*2,skinId:equippedSkin,
+      trail:[],ulti:true,
+      onHit:()=>{
+        killEnemy(tgt);
+        i++;
+        setTimeout(strikeNext,80);
+      }
+    };
+    kunais.push(uk);
+  }
+  strikeNext();
+  spawnParticles(player.x,player.y,20,'rgba(150,100,255,0.8)',true);
+  doShake(6);
+}
+
+function killEnemy(e){
+  if(!e.alive) return;
+  e.alive=false;
+  e.dying=true;
+  e.deathAnim=0;
+  player.kills++;
+  player.xp+=e.xpVal;
+  sessionGold+=e.goldVal;
+
+  if(settings.blood) spawnBlood(e.x,e.y);
+  spawnParticles(e.x,e.y,12,'rgba(200,50,50,0.7)');
+  doShake(3);
+  checkLevelUp();
+  updateHUD();
+}
+
+function checkLevelUp(){
+  while(player.xp>=player.xpToNext){
+    player.xp-=player.xpToNext;
+    player.level++;
+    player.xpToNext=Math.floor(player.xpToNext*1.4);
+    showUpgrade();
+  }
+}
+
+// ==================== UPGRADE SYSTEM ====================
+const ALL_UPGRADES=[
+  {id:'hp',icon:'❤',get name(){return t('upgHP');},get desc(){return t('upgHPd');},apply:()=>{player.maxHp+=20;player.hp=Math.min(player.hp+20,player.maxHp);}},
+  {id:'dmg',icon:'⚔',get name(){return t('upgDmg');},get desc(){return t('upgDmgd');},apply:()=>{player.damage+=8;}},
+  {id:'spd',icon:'⚡',get name(){return t('upgSpd');},get desc(){return t('upgSpdd');},apply:()=>{player.throwRate=Math.max(0.1,player.throwRate-0.08);}},
+  {id:'spc',icon:'◈',get name(){return t('upgSpc');},get desc(){return t('upgSpcd');},apply:()=>{player.specialUnlocked=true;player.speed+=20;}},
+  {id:'spd2',icon:'💨',get name(){return 'AGILITY';},get desc(){return 'Move faster';},apply:()=>{player.speed+=25;}},
+  {id:'ulti',icon:'☯',get name(){return 'FOCUS';},get desc(){return 'Faster ulti charge';},apply:()=>{player.ultiMax=Math.max(40,player.ultiMax-10);}},
+];
+function showUpgrade(){
+  gameState='upgrade';
+  const available=[...ALL_UPGRADES];
+  const picks=[];
+  while(picks.length<3&&available.length>0){
+    const idx=Math.floor(Math.random()*available.length);
+    picks.push(available.splice(idx,1)[0]);
+  }
+  const container=document.getElementById('upgradeCards');
+  document.getElementById('upgTitle').textContent=t('upgTitle');
+  container.innerHTML='';
+  for(const upg of picks){
+    const card=document.createElement('div');
+    card.className='upg-card';
+    card.innerHTML=`<div class="upg-icon">${upg.icon}</div><div class="upg-name">${upg.name}</div><div class="upg-desc">${upg.desc}</div>`;
+    card.onclick=()=>{
+      upg.apply();
+      document.getElementById('upgradeScreen').classList.remove('active');
+      gameState='playing';
+    };
+    container.appendChild(card);
+  }
+  document.getElementById('upgradeScreen').classList.add('active');
+}
+
+// ==================== PARTICLES ====================
+function spawnParticles(x,y,count,color,big=false){
+  if(!settings.particles)return;
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2,s=(big?4:2)+Math.random()*(big?4:3);
+    particles2.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:big?3:1.5,life:1,color,decay:0.03+Math.random()*0.03});
+  }
+}
+function spawnBlood(x,y){
+  for(let i=0;i<8;i++){
+    const a=Math.random()*Math.PI*2,s=1+Math.random()*3;
+    bloodDrops.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:1+Math.random()*2,life:1,decay:0.01+Math.random()*0.02});
+  }
+}
+function doShake(mag){if(settings.shake)shakeMag=Math.max(shakeMag,mag);}
+
+// ==================== FLOAT TEXT ====================
+function floatText(txt,x,y,color='#fff'){
+  const el=document.createElement('div');
+  el.className='float-text';
+  el.textContent=txt;
+  el.style.color=color;
+  el.style.left=(x-camX+GW/2)+'px';
+  el.style.top=(y-camY+GH/2-20)+'px';
+  document.getElementById('ui').appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+// ==================== HUD ====================
+function updateHUD(){
+  document.getElementById('hpBar').style.width=(player.hp/player.maxHp*200)+'px';
+  document.getElementById('xpBar').style.width=(player.xp/player.xpToNext*200)+'px';
+  document.getElementById('ultiBar').style.width=(player.ulti/player.ultiMax*200)+'px';
+  document.getElementById('hudLevel').textContent=t('lvl')+' '+player.level;
+  document.getElementById('hudGold').textContent='⬡ '+(gold+sessionGold);
+  document.getElementById('hudKills').textContent=player.kills+' '+t('kills');
+  const ready=player.ulti>=player.ultiMax&&!player.ultiActive;
+  document.getElementById('ultiReady').style.display=ready?'block':'none';
+}
+
+// ==================== GAME LOOP ====================
+let lastTime=0;
+function gameLoop(ts){
+  if(gameState!=='playing'){requestAnimationFrame(gameLoop);return;}
+  const dt=Math.min((ts-lastTime)/1000,0.05);
+  lastTime=ts;
+  gameTime+=dt;
+
+  // Shake
+  if(shakeMag>0){shakeX=(Math.random()-0.5)*shakeMag;shakeY=(Math.random()-0.5)*shakeMag;shakeMag*=0.85;if(shakeMag<0.1){shakeMag=0;shakeX=0;shakeY=0;}}
+
+  // Resize
+  GW=gameCanvas.width=window.innerWidth;
+  GH=gameCanvas.height=window.innerHeight;
+
+  // Player move
+  let dx=0,dy=0;
+  if(keys[settings.keys.up])dy-=1;
+  if(keys[settings.keys.down])dy+=1;
+  if(keys[settings.keys.left])dx-=1;
+  if(keys[settings.keys.right])dx+=1;
+  if(dx!==0||dy!==0){
+    const len=Math.sqrt(dx*dx+dy*dy);
+    dx/=len;dy/=len;
+    player.x=Math.max(20,Math.min(MAP_W-20,player.x+dx*player.speed*dt));
+    player.y=Math.max(20,Math.min(MAP_H-20,player.y+dy*player.speed*dt));
+    player.walkAnim+=dt*8;
+    player.facingAngle=Math.atan2(dy,dx);
+  }
+
+  // Mouse aim + auto-throw
+  player.lastThrow+=dt;
+  if(player.lastThrow>=1/Math.max(player.throwRate,0.1)){
+    // Find nearest enemy
+    let nearest=null,nearDist=Infinity;
+    for(const e of enemies){
+      if(!e.alive)continue;
+      const d=Math.hypot(e.x-player.x,e.y-player.y);
+      if(d<nearDist){nearDist=d;nearest=e;}
+    }
+    if(nearest&&nearDist<500){
+      const angle=Math.atan2(nearest.y-player.y,nearest.x-player.x);
+      const skin=getSkin();
+      kunais.push({
+        x:player.x,y:player.y,
+        vx:Math.cos(angle)*400,vy:Math.sin(angle)*400,
+        angle,speed:400,damage:player.damage,skinId:equippedSkin,
+        trail:[],life:3,
+      });
+      player.lastThrow=0;
+    }
+  }
+
+  // Update kunais
+  for(let i=kunais.length-1;i>=0;i--){
+    const k=kunais[i];
+    if(k.trail)k.trail.push({x:k.x,y:k.y,angle:k.angle});
+    if(k.trail&&k.trail.length>8)k.trail.shift();
+    k.x+=k.vx*dt; k.y+=k.vy*dt;
+    k.angle+=dt*15;
+    k.life=(k.life||3)-dt;
+    if(k.life<=0||k.x<0||k.x>MAP_W||k.y<0||k.y>MAP_H){kunais.splice(i,1);continue;}
+    // Hit enemies
+    if(!k.returning){
+      for(const e of enemies){
+        if(!e.alive)continue;
+        if(Math.hypot(k.x-e.x,k.y-e.y)<e.w){
+          e.hp-=k.damage;
+          e.hitFlash=0.5;
+          floatText('-'+Math.round(k.damage),e.x,e.y,'#ff6666');
+          spawnParticles(k.x,k.y,6,'rgba(200,150,100,0.8)');
+          player.ulti=Math.min(player.ultiMax,player.ulti+4);
+          if(e.hp<=0) killEnemy(e);
+          if(k.ulti&&k.onHit){k.onHit();kunais.splice(i,1);}
+          else kunais.splice(i,1);
+          break;
+        }
+      }
+    }else{
+      // Returning ulti kunai
+      if(Math.hypot(k.x-k.targetX,k.y-k.targetY)<20){kunais.splice(i,1);}
+      else{
+        const a=Math.atan2(k.targetY-k.y,k.targetX-k.x);
+        k.vx=Math.cos(a)*400;k.vy=Math.sin(a)*400;
+      }
+    }
+  }
+
+  // Update enemies
+  for(const e of enemies){
+    if(e.dying){e.deathAnim+=dt*3;continue;}
+    if(!e.alive)continue;
+    e.hitFlash=Math.max(0,e.hitFlash-dt*3);
+    const dx2=player.x-e.x,dy2=player.y-e.y;
+    const dist=Math.sqrt(dx2*dx2+dy2*dy2);
+    e.angle=Math.atan2(dy2,dx2);
+    if(dist>e.w+10){
+      e.x+=dx2/dist*e.speed*dt;
+      e.y+=dy2/dist*e.speed*dt;
+      e.walkAnim+=dt*6;
+    } else {
+      // Attack
+      e.lastThrow=(e.lastThrow||0)+dt;
+      if(e.lastThrow>=e.throwRate){
+        e.lastThrow=0;
+        player.hp=Math.max(0,player.hp-e.damage);
+        floatText('-'+e.damage,player.x,player.y-20,'#ff4444');
+        doShake(4);
+        spawnParticles(player.x,player.y,5,'rgba(255,50,50,0.6)');
+        if(player.hp<=0){playerDied();return;}
+      }
+    }
+  }
+  enemies=enemies.filter(e=>!e.dying||e.deathAnim<1);
+
+  // Spawn
+  spawnTimer+=dt;
+  const si=DIFF[difficulty].spawnInterval;
+  if(spawnTimer>=si){
+    spawnTimer=0;
+    const count=Math.floor(1+gameTime/60*DIFF[difficulty].spawnMult);
+    for(let i=0;i<Math.min(count,4);i++) spawnEnemy();
+  }
+
+  // Particles
+  for(let i=particles2.length-1;i>=0;i--){
+    const p=particles2[i];
+    p.x+=p.vx; p.y+=p.vy; p.vx*=0.92; p.vy*=0.92;
+    p.life-=p.decay;
+    if(p.life<=0)particles2.splice(i,1);
+  }
+  for(let i=bloodDrops.length-1;i>=0;i--){
+    const b=bloodDrops[i];
+    b.x+=b.vx*0.3; b.y+=b.vy*0.3; b.life-=b.decay;
+    if(b.life<=0)bloodDrops.splice(i,1);
+  }
+
+  // Camera
+  camX=player.x-GW/2;
+  camY=player.y-GH/2;
+
+  // Draw
+  ctx.save();
+  ctx.translate(-camX+shakeX,-camY+shakeY);
+  drawMap();
+  drawParticles();
+  // Blood on ground
+  for(const b of bloodDrops){
+    ctx.save();ctx.globalAlpha=b.life*0.5;
+    ctx.fillStyle='#881111';ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  for(const e of enemies) drawEnemy(e);
+  // Player
+  ctx.save();
+  ctx.translate(player.x,player.y);
+  // Player glow
+  if(player.ultiActive){
+    const glow=ctx.createRadialGradient(0,0,0,0,0,50);
+    glow.addColorStop(0,'rgba(150,100,255,0.3)');
+    glow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=glow;ctx.fillRect(-50,-50,100,100);
+  }
+  ctx.restore();
+  drawCharacter(player.x,player.y,player.facingAngle,player.walkAnim,true);
+  for(const k of kunais) drawKunai(k);
+  ctx.restore();
+
+  // Vignette
+  drawVignette();
+  updateHUD();
+  requestAnimationFrame(gameLoop);
+}
+
+// ==================== PLAYER DEATH ====================
+function playerDied(){
+  gameState='dead';
+  gold+=sessionGold;
+  saveProgress();
+
+  document.getElementById('hud').style.display='none';
+  document.getElementById('deathStats').innerHTML=
+    `${t('lvlReached')} ${player.level} &nbsp;|&nbsp; ${t('killsTotal')} ${player.kills}`;
+  document.getElementById('deathGold').textContent=t('goldEarned')+' ⬡ '+sessionGold;
+  document.getElementById('deathScreen').classList.add('active');
+}
+
+// ==================== SCREEN NAVIGATION ====================
+function hideAllScreens(){
+  ['diffScreen','upgradeScreen','deathScreen','shopScreen','settingsScreen'].forEach(id=>{
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('menuOverlay').style.display='';
+  document.getElementById('hud').style.display='none';
+}
+function showMenu(){
+  gameState='menu';
+  hideAllScreens();
+  document.getElementById('menuOverlay').style.display='';
+  document.getElementById('menuCanvas').style.display='';
+  animateMenu();
+  updateTexts();
+}
+function showDifficulty(){
+  document.getElementById('menuOverlay').style.display='none';
+  document.getElementById('deathScreen').classList.remove('active');
+  document.getElementById('diffScreen').classList.add('active');
+}
+function showShop(){
+  document.getElementById('menuOverlay').style.display='none';
+  renderShop('skins');
+  document.getElementById('shopScreen').classList.add('active');
+}
+function showSettings(){
+  document.getElementById('menuOverlay').style.display='none';
+  document.getElementById('settingsScreen').classList.add('active');
+}
+
+function startGame(diff){
+  difficulty=diff;
+  document.getElementById('diffScreen').classList.remove('active');
+  document.getElementById('menuOverlay').style.display='none';
+
+  // Init player
+  player.x=MAP_W/2; player.y=MAP_H/2;
+  player.hp=100; player.maxHp=100;
+  player.damage=25; player.throwRate=0.5;
+  player.lastThrow=0; player.speed=180;
+  player.level=1; player.xp=0; player.xpToNext=100;
+  player.ulti=0; player.ultiMax=100;
+  player.ultiActive=false; player.kills=0; player.alive=true;
+  player.walkAnim=0; player.facingAngle=0;
+  player.specialUnlocked=false;
+  kunais=[]; enemies=[]; particles2=[]; bloodDrops=[];
+  spawnTimer=0; gameTime=0; sessionGold=0;
+
+  document.getElementById('hud').style.display='block';
+  gameState='playing';
+  GW=gameCanvas.width=window.innerWidth;
+  GH=gameCanvas.height=window.innerHeight;
+  lastTime=performance.now();
+  requestAnimationFrame(gameLoop);
+  updateTexts();
+}
+
+// ==================== SHOP ====================
+let currentShopTab='skins';
+function shopTab(tab){
+  currentShopTab=tab;
+  document.getElementById('tabSkins').classList.toggle('active',tab==='skins');
+  document.getElementById('tabEquip').classList.toggle('active',tab==='equip');
+  renderShop(tab);
+}
+function renderShop(tab){
+  document.getElementById('shopGoldDisplay').textContent='⬡ '+gold;
+  const grid=document.getElementById('shopGrid');
+  grid.innerHTML='';
+  const list=tab==='equip'?SKINS.filter(s=>ownedSkins.includes(s.id)):SKINS;
+  for(const skin of list){
+    const owned=ownedSkins.includes(skin.id);
+    const equipped=equippedSkin===skin.id;
+    const cantAfford=!owned&&gold<skin.price;
+    const item=document.createElement('div');
+    item.className='shop-item'+(equipped?' equipped':cantAfford?' cant-afford':'');
+    // Mini preview canvas
+    const pv=document.createElement('canvas');
+    pv.width=80;pv.height=80;
+    const pc=pv.getContext('2d');
+    // Draw mini kunai
+    pc.save();pc.translate(40,40);
+    pc.fillStyle=skin.color;
+    pc.beginPath();pc.moveTo(24,0);pc.lineTo(-14,-5);pc.lineTo(-24,0);pc.lineTo(-14,5);pc.closePath();pc.fill();
+    pc.strokeStyle=skin.color;pc.lineWidth=2;pc.beginPath();pc.arc(-26,0,6,0,Math.PI*2);pc.stroke();
+    pc.restore();
+    item.appendChild(pv);
+    item.innerHTML+=`<div class="shop-item-name">${skin.name}</div>`;
+    if(!owned) item.innerHTML+=`<div class="shop-item-price">⬡ ${skin.price}</div>`;
+    else if(equipped) item.innerHTML+=`<div class="shop-item-price" style="color:#6dff9e">EQUIPPED</div>`;
+    else item.innerHTML+=`<div class="shop-item-price" style="color:#aaa">OWNED</div>`;
+    item.onclick=()=>{
+      if(equipped)return;
+      if(!owned){
+        if(gold<skin.price)return;
+        gold-=skin.price;
+        ownedSkins.push(skin.id);
+      }
+      equippedSkin=skin.id;
+      saveProgress();
+      renderShop(tab);
+    };
+    grid.appendChild(item);
+  }
+}
+
+// ==================== RESIZE ====================
+window.addEventListener('resize',()=>{
+  GW=gameCanvas.width=window.innerWidth;
+  GH=gameCanvas.height=window.innerHeight;
+  initMenuCanvas();
+});
+
+// ==================== INIT ====================
+loadSettings();
+loadProgress();
+initMenuCanvas();
+GW=gameCanvas.width=window.innerWidth;
+GH=gameCanvas.height=window.innerHeight;
+updateTexts();
+animateMenu();
+</script>
+</body>
+</html>
